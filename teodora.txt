@@ -1,0 +1,202 @@
+#include <LiquidCrystal.h>
+#include <util/delay.h>
+
+LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
+
+char ocitaj_taster()
+{
+  char taster = 0;
+  unsigned char row;
+  
+  MCUCR &= ~0x10;
+  PORTD = 0x0f; 
+  
+  for(row = 0x80; row != 0x08; row >>= 1)
+  {
+    DDRD = row;
+	_delay_ms(2);
+    
+    switch(row | ((~PIND) & 0x0f))
+    {
+      case 0x88:
+      	taster = '1'; break;
+      case 0x84:
+      	taster = '2'; break;
+      case 0x82:
+      	taster = '3'; break;
+      case 0x81:
+      	taster = 'A'; break;
+		
+	  case 0x48:
+      	taster = '4'; break;
+      case 0x44:
+      	taster = '5'; break;
+      case 0x42:
+      	taster = '6'; break;
+      case 0x41:
+      	taster = 'B'; break;
+		
+	  case 0x28:
+      	taster = '7'; break;
+      case 0x24:
+      	taster = '8'; break;
+      case 0x22:
+      	taster = '9'; break;
+      case 0x21:
+      	taster = 'C'; break;
+		
+	  case 0x18:
+      	taster = '*'; break;
+      case 0x14:
+      	taster = '0'; break;
+      case 0x12:
+      	taster = '#'; break;
+      case 0x11:
+      	taster = 'D'; break;
+    }
+  }
+  
+  return taster;
+}
+
+int main()
+{
+  	lcd.begin(16, 2);
+    int broj1 = 0, broj2 = 0; 
+    int cifra;
+    int  prvi_broj = 0, drugi_broj = 0; 
+    double rez;
+  	int jednako = 0;
+    int i = 0;   
+	char operacija = 0;
+  	int pozicija = -1;
+    lcd.cursor();
+    
+	while(1)
+    { 
+   		char taster = ocitaj_taster();
+        switch (taster)
+        {
+        	case '0' ... '9':cifra = taster - '0';
+                             if (operacija == 0)
+                             {
+                               broj1 = broj1 * 10 + cifra ;
+                               _delay_ms(500);
+                               lcd.print(cifra);
+                               prvi_broj = 1;
+                               pozicija++;
+                             }
+          			 		 if (operacija) 
+          			 		 {
+                                broj2 = broj2 * 10 + cifra ;
+                               _delay_ms(500);
+                               lcd.print(cifra);
+                               drugi_broj = 1;
+                               pozicija++;
+                             }
+                             break;
+               
+        	case 'A' ... 'D':if (operacija == 0 && prvi_broj == 1)
+         	    		     {
+                               switch (taster) 
+                               {
+                                    case 'A': operacija = '+'; break;
+                                    case 'B': operacija = '-'; break;
+                                    case 'C': operacija = '*'; break;
+                                    case 'D': operacija = '/'; break;
+                               }
+                               lcd.print(operacija);
+              				   pozicija++;
+                             }
+                             break;
+        	case '*': if (prvi_broj == 1 && drugi_broj == 1 && operacija)
+          		  	  {
+                          lcd.print('=');
+              			  prvi_broj = 0;
+                          drugi_broj = 0;
+              			  jednako = 1;
+                          switch (operacija) 
+                          {
+                               case '+' : rez = broj1 + broj2; lcd.print(rez); break;
+                               case '-' : rez = broj1 - broj2; lcd.print(rez); break;
+                               case '*' : rez = broj1 * broj2; lcd.print(rez); break;
+                               case '/' : if (broj2 != 0) 
+                                          {
+                                               rez = (double)broj1 / (double)broj2; 
+                                               lcd.print(rez);
+                                               break;
+                                           }
+                                           else
+                                           { 
+                                               lcd.clear();
+                                               lcd.print("Nije moguce!"); break;
+                                           }
+                           }
+                       }
+                       break;
+            
+             case '#':if(jednako)
+             		  {
+          			  	lcd.clear();
+                      	broj1 = 0;
+               		  	broj2 = 0;
+                      	operacija = 0;
+          			  	prvi_broj = 0;
+          			  	drugi_broj = 0;
+               			jednako = 0;
+               			pozicija = -1;
+                      	break;
+             		  }
+          			  else
+                      {
+                        
+                        lcd.setCursor(pozicija,0);
+                        lcd.print(" ");
+                        lcd.setCursor(pozicija,0);
+                        pozicija--;
+                        if(drugi_broj)
+                        {
+                          if(broj2 < 10)
+                          {
+                            broj2 = 0;
+                            drugi_broj = 0;
+                            break;
+                          }
+                          else
+                          {
+                            broj2 /= 10;
+                            break;
+                          }
+                        }
+                        else if(operacija)
+                        {
+                         
+                          operacija = 0;
+                        }
+                        else if(prvi_broj)
+                        {
+                          if(broj1 < 10)
+                          {
+                            broj1 = 0;
+                            prvi_broj = 0;
+                            lcd.clear();
+                            break;
+                          }
+                          else
+                          {
+                            broj1 /= 10;
+                            break;
+                          }
+                          
+                        }
+                        
+                        
+                      }
+                      break; 
+               
+        }
+     }
+
+    
+  	return 0;
+}
